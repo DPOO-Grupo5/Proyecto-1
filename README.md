@@ -6,3 +6,4 @@ Club Deportivo Séneca.
 ## Entregas
 
 - [Entrega 1 - Análisis](./Entrega-1/)
+- [Entrega 1 - Análisis](./Entrega-2/)

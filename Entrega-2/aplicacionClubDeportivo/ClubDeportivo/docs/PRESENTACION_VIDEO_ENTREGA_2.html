@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrega 2 · Club deportivo</title>
+  <style>
+    :root { color-scheme: dark; --bg:#07111f; --panel:#101e30; --ink:#edf4ff; --muted:#a9bad0; --lime:#c7f36b; --cyan:#6de2d3; --red:#ff9b9b; }
+    * { box-sizing:border-box }
+    body { margin:0; background:#030914; color:var(--ink); font:clamp(16px,1.5vw,22px)/1.45 Inter,Segoe UI,Arial,sans-serif }
+    .deck { width:min(100vw,177.78vh); height:min(100vh,56.25vw); min-height:560px; margin:auto; position:relative; overflow:hidden; background:radial-gradient(ellipse at 90% 5%,#183452 0,transparent 35%),linear-gradient(145deg,#081321,#0b1726 60%,#0d1b2b); }
+    .slide { display:none; height:100%; padding:6.3% 8% 7%; position:relative; }
+    .slide.active { display:flex; flex-direction:column; justify-content:center; animation:in .28s ease-out }
+    @keyframes in { from {opacity:.35; transform:translateY(8px)} to {opacity:1;transform:none} }
+    .eyebrow { color:var(--lime); text-transform:uppercase; letter-spacing:.16em; font-size:.72em; font-weight:800; margin:0 0 1rem }
+    h1,h2 { line-height:1.04; letter-spacing:-.035em; max-width:1050px; margin:0 0 .55em }
+    h1 {font-size:clamp(44px,6.5vw,92px)} h2 {font-size:clamp(34px,4.6vw,64px)}
+    p {max-width:1000px; margin:.35em 0; color:var(--muted)}
+    strong {color:var(--ink)}
+    .accent {color:var(--lime)}
+    .hero-sub {font-size:clamp(20px,2.4vw,32px); max-width:800px}
+    .tag {display:inline-flex; border:1px solid #456071; color:var(--cyan); padding:.45em .8em; border-radius:99px; font-size:.75em; margin-top:1.25em; width:max-content}
+    .grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:.8rem}
+    .card {background:linear-gradient(145deg,#14263a,#0e1b2a); border:1px solid #263c50; border-radius:18px; padding:1.15rem 1.3rem; min-height:110px}
+    .card h3 {margin:0 0 .35em; color:var(--cyan); font-size:1.05em}
+    .card p {font-size:.83em; margin:0}
+    ul {padding-left:1.2em; margin:.2em 0; color:var(--muted)} li {padding:.28em 0}
+    .status {display:inline-block; font-size:.65em; text-transform:uppercase; letter-spacing:.08em; font-weight:800; border-radius:99px; padding:.3em .65em; margin-bottom:.55em}
+    .verified {color:#d9ff9a; background:#30441b}. codecheck {color:#9feee4;background:#143d3b}. pending {color:#ffd3a3;background:#49351f}
+    .metric {font-size:clamp(42px,6vw,76px); font-weight:800; color:var(--lime); line-height:1}
+    .rule {border-left:3px solid var(--lime); padding-left:1em; margin:.75em 0}
+    .caption {position:absolute; left:8%; right:8%; bottom:4.2rem; font-size:.72em; color:#91a5bb}
+    .nav {position:absolute; z-index:4; bottom:0; left:0; right:0; height:3.1rem; display:flex; align-items:center; gap:.65rem; padding:0 2rem; background:#030914b8; border-top:1px solid #25384a}
+    button {background:#13263b;color:var(--ink);border:1px solid #3a526a;border-radius:8px;padding:.4em .8em;font:inherit;cursor:pointer} button:hover {border-color:var(--lime)}
+    .counter {color:var(--muted);font-size:.75em;min-width:5em;text-align:center}
+    .track {height:3px;background:#25384a;flex:1;border-radius:5px;overflow:hidden}.fill {height:100%;width:0;background:var(--lime);transition:width .2s}
+    .notes {position:absolute; right:2rem; top:1.2rem; font-size:.68em; color:#8195aa}
+    .notes b {color:var(--cyan)}
+    @media(max-width:700px) { .deck {width:100vw;height:100vh;min-height:0}.slide{padding:13% 7% 18%}.grid{grid-template-columns:1fr;gap:.5rem}.card{padding:.8rem;min-height:0}.caption{left:7%;right:7%;bottom:4rem}.notes{display:none}.nav{padding:0 .6rem} }
+    @media print { body{background:white}.deck{width:100%;height:auto;overflow:visible;background:white;color:#111}.slide,.slide.active{display:flex;min-height:100vh;page-break-after:always;color:#111}.slide p,.slide li{color:#333}.card{background:#f3f6f9;border-color:#ccd5de}.nav,.notes{display:none} }
+  </style>
+</head>
+<body>
+<main class="deck" aria-label="Presentación grabable de Entrega 2">
+  <section class="slide active">
+    <div class="eyebrow">Proyecto de programación orientada a objetos</div>
+    <h1>Club deportivo<br><span class="accent">Entrega 2</span></h1>
+    <p class="hero-sub">Una revisión breve de los perfiles, reglas de negocio y persistencia implementados.</p>
+    <span class="tag">Demostración basada en evidencia del proyecto</span>
+    <div class="caption">Guion sugerido · 6–7 minutos · Navega con ← → o los botones</div>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">01 · Aplicación comprobada</div><h2>¿Qué se puede mostrar en la consola?</h2>
+    <div class="grid">
+      <article class="card"><h3>Administrador</h3><p>Inicio de sesión, resumen del club, creación de usuarios y cambio de contraseña.</p></article>
+      <article class="card"><h3>Socio</h3><p>Acceso y consulta de su resumen personal: equipo, puntos y reservas.</p></article>
+      <article class="card"><h3>Entrenador</h3><p>El código ofrece un resumen con sesiones planificadas; el menú de consola es limitado.</p></article>
+      <article class="card"><h3>Fisioterapeuta</h3><p>Puede autenticarse como empleado; la consola presenta un resumen genérico del empleado.</p></article>
+    </div>
+    <p class="caption"><span class="status verified">Visto al ejecutar</span> Inicio de sesión y resúmenes de administrador y socio. <span class="status codecheck">Revisado en código</span> Flujos de entrenador y fisioterapeuta.</p>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">02 · Reglas de dominio</div><h2>La lógica se verificó con pruebas aisladas</h2>
+    <div class="grid">
+      <article class="card"><span class="status verified">Verificado · 8/8</span><h3>Acceso seguro</h3><p>Autenticación sin distinguir mayúsculas y rechazo de contraseña incorrecta; almacenamiento con hash PBKDF2.</p></article>
+      <article class="card"><span class="status verified">Verificado · 8/8</span><h3>Capacidad y reservas</h3><p>Rechaza inscripciones que superan el cupo y reservas que se cruzan en horario.</p></article>
+      <article class="card"><span class="status verified">Verificado · 8/8</span><h3>Cafetería</h3><p>Rechaza ventas sin existencias suficientes; venta válida descuenta stock y calcula impuesto del 8%.</p></article>
+      <article class="card"><span class="status pending">Pendiente de demo visual</span><h3>Flujos de negocio</h3><p>Estas reglas se comprobaron en el verificador Java, no recorriendo pantallas de la consola.</p></article>
+    </div>
+    <p class="caption">Al narrar, di “prueba automatizada de la lógica”; no presentes estas reglas como acciones disponibles en el menú de consola.</p>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">03 · Persistencia</div><h2>Los datos sobreviven al reinicio</h2>
+    <div class="grid">
+      <article class="card"><div class="metric">8/8</div><p>Casos del verificador completados en la ejecución registrada.</p></article>
+      <article class="card"><h3>Prueba de serialización</h3><p>Guardar y volver a cargar el estado se comprobó en una carpeta temporal aislada.</p></article>
+      <article class="card"><h3>Prueba de consola</h3><p>Se inició la aplicación dos veces con un archivo de datos temporal: el resumen conservó 2 usuarios, 1 equipo y 1 producto.</p></article>
+      <article class="card"><h3>Qué significa</h3><p>La persistencia está comprobada. La consola no mostró una operación de alta seguida de reinicio en la prueba grabada.</p></article>
+    </div>
+    <p class="caption">La prueba temporal no modifica los datos de entrega. En la grabación, muestra solo cuentas de demostración y evita exponer credenciales reales.</p>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">04 · Guion de grabación</div><h2>Pasos concretos para capturar</h2>
+    <ol>
+      <li>Abre el proyecto en Eclipse y ejecuta <strong>Consola</strong> con el almacén temporal preparado.</li>
+      <li>Entra como administrador de demostración; enseña el resumen y la opción de crear usuario. No hace falta guardar un alta para esta toma.</li>
+      <li>Cierra sesión y entra como socio de demostración; enseña el resumen individual.</li>
+      <li>En una segunda toma, inicia sesión como entrenador y fisioterapeuta para mostrar el resumen disponible de cada perfil.</li>
+      <li>Enseña la salida registrada de <strong>VerificacionEntrega</strong> (8/8) para reglas y persistencia; aclara que es un verificador aparte.</li>
+      <li>Cierra con una diapositiva de alcance: consola funcional y lógica comprobada; varias operaciones de dominio aún no están en los menús.</li>
+    </ol>
+    <p class="caption">Si las credenciales demo no están disponibles, consúltalas en el README local antes de grabar; no inventes usuarios ni resultados.</p>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">05 · Correspondencia y límites</div><h2>Contar lo que existe con precisión</h2>
+    <div class="rule"><strong>Demostración de consola:</strong> login, resumen, cambio de contraseña y creación de usuario por administrador.</div>
+    <div class="rule"><strong>Prueba automatizada:</strong> autenticación, capacidad, conflictos de reserva, stock, impuesto y guardar/cargar estado.</div>
+    <div class="rule"><strong>Solo inspeccionado en código:</strong> operaciones de dominio de entrenador, fisioterapia, competencias y otras acciones sin acceso desde el menú actual.</div>
+    <div class="rule"><strong>Ojo con los diagramas:</strong> hay mensajes y nombres de método que no coinciden exactamente con el código actual; no los uses como prueba de ejecución.</div>
+    <p class="caption">No afirmar que se muestran competencias o puntos de fidelidad conformes a la regla del 2%: hay diferencias documentadas entre diseño y código.</p>
+  </section>
+  <section class="slide">
+    <div class="eyebrow">06 · Antes de grabar</div><h2>Checklist final</h2>
+    <div class="grid">
+      <article class="card"><h3>Preparación</h3><p>☐ Abrir la consola y comprobar cuentas demo<br>☐ Confirmar que el almacén apunta a datos temporales<br>☐ Cerrar ventanas y ocultar notificaciones</p></article>
+      <article class="card"><h3>Durante</h3><p>☐ Mostrar cada perfil<br>☐ Separar claramente consola y verificador<br>☐ Mantener legible el texto y la salida<br>☐ No revelar claves personales</p></article>
+      <article class="card"><h3>Al terminar</h3><p>☐ Revisar audio y transiciones<br>☐ Confirmar duración solicitada por el curso<br>☐ Verificar que no aparezcan datos reales</p></article>
+      <article class="card"><h3>Última frase sugerida</h3><p>“La entrega demuestra autenticación, persistencia y reglas de negocio comprobadas; la consola presenta una parte de esas capacidades.”</p></article>
+    </div>
+    <p class="caption">Fin · Presentación informativa generada desde el estado inspeccionado del proyecto.</p>
+  </section>
+  <div class="notes"><b>Tip:</b> F11 para pantalla completa</div>
+  <nav class="nav" aria-label="Controles de diapositivas">
+    <button id="prev" aria-label="Diapositiva anterior">←</button><span class="counter" id="counter">1 / 7</span>
+    <div class="track"><div class="fill" id="fill"></div></div><button id="next" aria-label="Diapositiva siguiente">→</button>
+  </nav>
+</main>
+<script>
+  const slides=[...document.querySelectorAll('.slide')], counter=document.querySelector('#counter'), fill=document.querySelector('#fill'); let current=0;
+  function show(n){current=(n+slides.length)%slides.length;slides.forEach((s,i)=>s.classList.toggle('active',i===current));counter.textContent=`${current+1} / ${slides.length}`;fill.style.width=`${(current+1)/slides.length*100}%`}
+  document.querySelector('#prev').addEventListener('click',()=>show(current-1));document.querySelector('#next').addEventListener('click',()=>show(current+1));
+  document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(current+1)}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(current-1)}if(e.key==='Home')show(0);if(e.key==='End')show(slides.length-1)});
+</script>
+</body>
+</html>

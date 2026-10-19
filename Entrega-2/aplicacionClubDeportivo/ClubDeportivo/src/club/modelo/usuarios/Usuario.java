@@ -4,6 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 import club.modelo.tienda.Producto;
 import club.modelo.tienda.Transaccion;
@@ -17,6 +23,9 @@ public abstract class Usuario implements java.io.Serializable {
     protected double descuento;
 
     private List<Transaccion> transacciones = new ArrayList<>();
+    private static final int ITERACIONES_PASSWORD = 120000;
+    private static final int BITS_PASSWORD = 256;
+    private static final SecureRandom ALEATORIO = new SecureRandom();
 
     public Usuario(String login, String password, String nombre) {
         setLogin(login);
@@ -25,8 +34,24 @@ public abstract class Usuario implements java.io.Serializable {
         this.puntosFidelidad = 0; 
     }
 
-    public boolean validarPassword(String passwordIngresado) { 
-        return this.password != null && this.password.equals(passwordIngresado); 
+    public boolean validarPassword(String passwordIngresado) {
+        if (this.password == null || passwordIngresado == null) return false;
+        if (!this.password.startsWith("pbkdf2$")) {
+            if (!this.password.equals(passwordIngresado)) return false;
+            setPassword(passwordIngresado); // Migra credenciales legadas al primer login correcto.
+            return true;
+        }
+        String[] partes = this.password.split("\\$", -1);
+        if (partes.length != 4) return false;
+        try {
+            int iteraciones = Integer.parseInt(partes[1]);
+            byte[] salt = Base64.getDecoder().decode(partes[2]);
+            byte[] esperado = Base64.getDecoder().decode(partes[3]);
+            byte[] obtenido = derivarPassword(passwordIngresado, salt, iteraciones, esperado.length * 8);
+            return MessageDigest.isEqual(esperado, obtenido);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public void actualizarPassword(String actual, String nueva) { 
@@ -80,9 +105,28 @@ public abstract class Usuario implements java.io.Serializable {
 
     public void setPuntosFidelidad(int puntosFidelidad) { if (puntosFidelidad < 0) throw new IllegalArgumentException("Los puntos no pueden ser negativos."); this.puntosFidelidad = puntosFidelidad; }
 
+    /** Devuelve el valor almacenado por compatibilidad; las credenciales son hashes PBKDF2. */
     public String getPassword() { return password; }
 
-    public void setPassword(String password) { if (password == null || password.isEmpty()) throw new IllegalArgumentException("La contraseña es obligatoria."); this.password = password; }
+    public void setPassword(String password) {
+        if (password == null || password.isEmpty()) throw new IllegalArgumentException("La contraseña es obligatoria.");
+        byte[] salt = new byte[16];
+        ALEATORIO.nextBytes(salt);
+        byte[] hash = derivarPassword(password, salt, ITERACIONES_PASSWORD, BITS_PASSWORD);
+        this.password = "pbkdf2$" + ITERACIONES_PASSWORD + "$" + Base64.getEncoder().encodeToString(salt)
+                + "$" + Base64.getEncoder().encodeToString(hash);
+    }
+
+    private static byte[] derivarPassword(String password, byte[] salt, int iteraciones, int bits) {
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iteraciones, bits);
+        try {
+            return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("No se pudo proteger la contraseña.", e);
+        } finally {
+            spec.clearPassword();
+        }
+    }
 
     public double getDescuento() { return descuento; }
 

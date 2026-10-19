@@ -23,18 +23,27 @@ import club.modelo.usuarios.Socio;
 import club.modelo.usuarios.Usuario;
 
 public final class ManejadorPersistencia {
-    private static final String DIRECTORIO = "datos_seneca";
-    private static final String ARCHIVO_ESTADO = DIRECTORIO + File.separator + "club.ser";
-    private static final String ARCHIVO_LEGACY = DIRECTORIO + File.separator + "usuarios.txt";
+    private static final String DIRECTORIO_PREDETERMINADO = "datos_seneca";
 
     private ManejadorPersistencia() { }
 
+    private static String directorio() {
+        String configurado = System.getProperty("club.datos");
+        return configurado == null || configurado.trim().isEmpty() ? DIRECTORIO_PREDETERMINADO : configurado;
+    }
+
+    private static File archivoEstado() { return new File(directorio(), "club.ser"); }
+
+    public static boolean existeEstado() {
+        return archivoEstado().isFile();
+    }
+
     public static void guardarEstado(SistemaClub sistema) {
         if (sistema == null) throw new IllegalArgumentException("El estado del club es obligatorio.");
-        File directorio = new File(DIRECTORIO);
+        File directorio = new File(directorio());
         if (!directorio.exists() && !directorio.mkdirs()) throw new IllegalStateException("No se pudo crear el directorio de datos.");
-        Path temporal = new File(DIRECTORIO, "club.ser.tmp").toPath();
-        Path destino = new File(ARCHIVO_ESTADO).toPath();
+        Path temporal = new File(directorio, "club.ser.tmp").toPath();
+        Path destino = archivoEstado().toPath();
         try (FileOutputStream archivo = new FileOutputStream(temporal.toFile());
              ObjectOutputStream salida = new ObjectOutputStream(archivo)) {
             salida.writeObject(sistema);
@@ -54,7 +63,7 @@ public final class ManejadorPersistencia {
     }
 
     public static SistemaClub cargarEstado() {
-        File estado = new File(ARCHIVO_ESTADO);
+        File estado = archivoEstado();
         if (estado.isFile()) {
             try (ObjectInputStream entrada = new ObjectInputStream(new FileInputStream(estado))) {
                 Object objeto = entrada.readObject();
@@ -72,7 +81,7 @@ public final class ManejadorPersistencia {
 
     private static SistemaClub cargarUsuariosLegados() {
         SistemaClub sistema = new SistemaClub();
-        File archivo = new File(ARCHIVO_LEGACY);
+        File archivo = new File(directorio(), "usuarios.txt");
         if (!archivo.isFile()) return sistema;
         try (BufferedReader lector = new BufferedReader(new FileReader(archivo))) {
             String linea;

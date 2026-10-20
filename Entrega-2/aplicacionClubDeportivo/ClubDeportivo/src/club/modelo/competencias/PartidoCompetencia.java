@@ -21,6 +21,7 @@ public class PartidoCompetencia implements java.io.Serializable {
     private List<EquipoCompetencia> equipos = new ArrayList<>();
     private List<EstadisticaJugadorPartido> estadisticas = new ArrayList<>();
     private Set<Socio> sancionadosEnEstePartido = new HashSet<>();
+    private EquipoCompetencia ganadorPorDesempate;
 
     public PartidoCompetencia(LocalDate fecha, String marcador, String escenario) {
         this.fecha = fecha;
@@ -56,6 +57,7 @@ public class PartidoCompetencia implements java.io.Serializable {
         if (finalizado) throw new IllegalStateException("El resultado ya fue registrado.");
         if (local < 0 || visitante < 0) throw new IllegalArgumentException("Los marcadores no pueden ser negativos.");
         validarPuedeJugarse();
+        if (competencia != null) competencia.getDeporte().validarMarcador(local, visitante);
         capturarSancionados(equipos.get(0));
         capturarSancionados(equipos.get(1));
         marcadorLocal = local;
@@ -69,7 +71,8 @@ public class PartidoCompetencia implements java.io.Serializable {
     }
 
     public EquipoCompetencia getGanador() {
-        if (!finalizado || marcadorLocal == marcadorVisitante) return null;
+    	if (!finalizado) return null;
+    	if (marcadorLocal == marcadorVisitante) return ganadorPorDesempate;
         return marcadorLocal > marcadorVisitante ? equipos.get(0) : equipos.get(1);
     }
 
@@ -79,11 +82,36 @@ public class PartidoCompetencia implements java.io.Serializable {
         Socio jugador = estadistica.getJugador();
         if (sancionadosEnEstePartido.contains(jugador)) throw new IllegalArgumentException("Un jugador sancionado antes del partido no puede registrar participación.");
         if (!perteneceAEquipoParticipante(jugador)) throw new IllegalArgumentException("El jugador no pertenece a un equipo participante.");
+        if (!competencia.estaEnNomina(jugador)) throw new IllegalArgumentException("El jugador no está en la nómina de la competencia.");
+        
         validarTipoEstadistica(estadistica);
         for (EstadisticaJugadorPartido existente : estadisticas) if (existente.getJugador() == jugador) throw new IllegalStateException("Ya hay estadísticas para este jugador.");
         estadistica.setPartidoCompetencia(this);
         estadisticas.add(estadistica);
         jugador.registrarEstadistica(estadistica);
+        if (estadistica instanceof EstadisticaJugadorFutbol) registrarSancionDisciplinaria((EstadisticaJugadorFutbol) estadistica, jugador);
+    }
+    
+    private void registrarSancionDisciplinaria(EstadisticaJugadorFutbol estadistica, Socio jugador) {
+        int acumuladas = 0;
+        for (PartidoCompetencia partido : competencia.getPartidos())
+            for (EstadisticaJugadorPartido e : partido.getEstadisticas())
+                if (e.getJugador() == jugador && e instanceof EstadisticaJugadorFutbol)
+                    acumuladas += ((EstadisticaJugadorFutbol) e).getTarjetasAmarillas();
+        int antes = acumuladas - estadistica.getTarjetasAmarillas();
+        boolean porAmarillas = acumuladas / 2 > antes / 2;   // cada 2 amarillas acumuladas en la competencia
+        boolean roja = estadistica.getTarjetasRojas() > 0;
+        if (roja || porAmarillas) {
+            Sancion sancion = new Sancion(roja ? "Tarjeta roja" : "Acumulación de amarillas en la competencia", 1, false, jugador);
+            estadistica.setSancion(sancion);
+            jugador.registrarSancion(sancion);
+        }
+    }
+
+    public void resolverEmpate(EquipoCompetencia ganador) {
+        if (!finalizado || marcadorLocal != marcadorVisitante) throw new IllegalStateException("Solo se resuelve un partido finalizado en empate.");
+        if (ganador == null || !equipos.contains(ganador)) throw new IllegalArgumentException("El ganador debe ser uno de los equipos del partido.");
+        ganadorPorDesempate = ganador;
     }
 
     private boolean perteneceAEquipoParticipante(Socio jugador) {

@@ -6,4 +6,9 @@ public class Baloncesto extends DeporteConjunto implements java.io.Serializable 
     public Baloncesto(String nombre, int minJugadores) {
         super(nombre, minJugadores);
     }
+    
+    @Override
+    public void validarMarcador(int local, int visitante) {
+        if (local == visitante) throw new IllegalArgumentException("En baloncesto no hay empates.");
+    }
 }

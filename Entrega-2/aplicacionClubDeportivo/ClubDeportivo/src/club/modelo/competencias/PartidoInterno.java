@@ -51,6 +51,7 @@ public class PartidoInterno implements java.io.Serializable {
         validarPuedeJugarse();
         if (golesA < 0 || golesB < 0) throw new IllegalArgumentException("El marcador no puede ser negativo.");
         if (finalizado) throw new IllegalStateException("El resultado ya fue registrado.");
+        equipoLocal.getDeporte().validarMarcador(golesA, golesB);
         marcadorLocal = golesA;
         marcadorVisitante = golesB;
         marcadorFinal = golesA + " - " + golesB;

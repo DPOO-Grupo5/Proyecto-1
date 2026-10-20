@@ -110,7 +110,7 @@ public class Transaccion implements java.io.Serializable {
 
     public int calcularPuntosGenerados() {
         double neto = Math.max(0.0, calcularSubtotal() - descuento) + impuestos;
-        puntosFidelidad = (int) (neto / 1000.0);
+        puntosFidelidad = (int) Math.round(neto * 0.02);
         return puntosFidelidad;
     }
 
@@ -171,6 +171,20 @@ public class Transaccion implements java.io.Serializable {
                 if (pendiente == 0) break;
             }
         }
+    }
+    public double getPropinaSugerida() {
+        return Math.max(0.0, calcularSubtotal() - descuento) * 0.10;
+    }
+
+    public List<String> consultarAlergenos() {
+        List<String> alergenos = new ArrayList<>();
+        for (DetalleTransaccion detalle : detalles) {
+            if (detalle.getProducto() instanceof Snack) {
+                for (String a : ((Snack) detalle.getProducto()).getAlergenos())
+                    if (!alergenos.contains(a)) alergenos.add(a);
+            }
+        }
+        return alergenos;
     }
 
     public boolean contieneBebidaCaliente() {

@@ -1,6 +1,11 @@
 package club.modelo.usuarios;
 
 import java.time.LocalDate;
+import club.modelo.competencias.PartidoCompetencia;
+import club.modelo.competencias.PartidoInterno;
+import club.modelo.entrenamiento.SesionEntrenamiento;
+import club.modelo.instalaciones.Instalacion;
+import club.modelo.instalaciones.Reserva;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -128,6 +133,64 @@ public class Administrador extends Usuario implements java.io.Serializable {
         solicitud.aplicarCambio();
         if (!solicitudesAprobadas.contains(solicitud)) solicitudesAprobadas.add(solicitud);
     }
+    
+    public double reporteVentas(SistemaClub sistema, String rubro, LocalDate desde, LocalDate hasta) {
+        if (sistema == null || rubro == null || desde == null || hasta == null)
+            throw new IllegalArgumentException("Sistema, rubro y periodo son obligatorios.");
+        double total = 0.0;
+        for (Usuario usuario : sistema.getUsuarios().values()) {
+            for (Transaccion t : usuario.consultarHistorialCompras()) {
+                LocalDate dia = t.getFechaHora().toLocalDate();
+                if (t.isConfirmada() && t.getRubro().equalsIgnoreCase(rubro) && !dia.isBefore(desde) && !dia.isAfter(hasta))
+                    total += t.getTotal();
+            }
+        }
+        return total;
+    }
+
+    public List<Reserva> historialReservas(SistemaClub sistema) {
+        List<Reserva> todas = new ArrayList<>();
+        for (Instalacion i : sistema.getInstalaciones()) todas.addAll(i.getReservas());
+        return todas;
+    }
+
+    public List<SesionEntrenamiento> historialSesiones(SistemaClub sistema) {
+        List<SesionEntrenamiento> todas = new ArrayList<>();
+        for (Instalacion i : sistema.getInstalaciones()) todas.addAll(i.getSesiones());
+        return todas;
+    }
+
+    public List<PartidoInterno> historialPartidosInternos(SistemaClub sistema) {
+        List<PartidoInterno> todos = new ArrayList<>();
+        for (Equipo e : sistema.getEquipos())
+            for (PartidoInterno p : e.getPartidosInternos()) if (!todos.contains(p)) todos.add(p);
+        return todos;
+    }
+
+    public List<PartidoCompetencia> historialPartidosCompetencia(SistemaClub sistema) {
+        List<PartidoCompetencia> todos = new ArrayList<>();
+        for (Competencia c : sistema.getCompetencias()) todos.addAll(c.getPartidos());
+        return todos;
+    }
+
+    public String estadoInventario(SistemaClub sistema) {
+        StringBuilder sb = new StringBuilder("--- Instalaciones ---\n");
+        for (Instalacion i : sistema.getInstalaciones())
+            sb.append(i.getNombre()).append(" | reservas: ").append(i.getReservas().size()).append('\n');
+        sb.append("--- Artículos ---\n");
+        for (Producto p : sistema.getProductos()) {
+            sb.append(p.getNombre());
+            for (Existencia e : p.getExistencias())
+                sb.append(" | ").append(e.getUbicacionInventario()).append(": ").append(e.getCantidad());
+            sb.append('\n');
+        }
+        return sb.toString();
+    }
+
+    public void asignarTurno(Empleado empleado, Turno turno) {
+        if (empleado == null || turno == null) throw new IllegalArgumentException("El empleado y el turno son obligatorios.");
+        empleado.agregarTurno(turno);
+    }
 
     public Map<String, Double> generarReporteVentas(List<Transaccion> transacciones, String rubro,
                                                      String periodo, LocalDate fechaRef) {
@@ -149,6 +212,21 @@ public class Administrador extends Usuario implements java.io.Serializable {
             if (coincide) reporte.merge(transaccion.getRubro(), transaccion.getTotal(), Double::sum);
         }
         return reporte;
+    }
+    
+    public List<Empleado> listarEmpleados(SistemaClub sistema) {
+        List<Empleado> empleados = new ArrayList<>();
+        for (Usuario u : sistema.getUsuarios().values())
+            if (u instanceof Empleado) empleados.add((Empleado) u);
+        return empleados;
+    }
+
+    public List<SolicitudCambioTurno> consultarSolicitudesPendientes(List<Empleado> empleados) {
+        List<SolicitudCambioTurno> pendientes = new ArrayList<>();
+        for (Empleado e : empleados)
+            for (SolicitudCambioTurno s : e.getSolicitudes())
+                if ("Pendiente".equals(s.getEstado())) pendientes.add(s);
+        return pendientes;
     }
 
     public String generarReporteDeportivo(List<Socio> socios) {

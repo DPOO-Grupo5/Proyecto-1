@@ -56,12 +56,22 @@ public class Grupo implements java.io.Serializable {
         }
         tabla.sort((a, b) -> {
             int comparacion = Integer.compare(b.getPuntuacion(), a.getPuntuacion());
+            if (comparacion == 0) comparacion = enfrentamientoDirecto(a.getEquipo(), b.getEquipo());
             if (comparacion == 0) comparacion = Integer.compare(b.getTantosFavor() - b.getTantosContra(), a.getTantosFavor() - a.getTantosContra());
             if (comparacion == 0) comparacion = a.getEquipo().getNombre().compareToIgnoreCase(b.getEquipo().getNombre());
             return comparacion;
         });
         for (int i = 0; i < tabla.size(); i++) tabla.get(i).setPosicion(i + 1);
         posiciones = tabla;
+    }
+    
+    private int enfrentamientoDirecto(EquipoCompetencia x, EquipoCompetencia y) {
+        for (PartidoCompetencia p : partidos) {
+            if (!p.isFinalizado() || !p.getEquipos().contains(x) || !p.getEquipos().contains(y)) continue;
+            EquipoCompetencia ganador = p.getGanador();
+            if (ganador != null) return ganador == x ? -1 : 1;
+        }
+        return 0;
     }
 
     private PosicionEquipo buscarPosicion(List<PosicionEquipo> tabla, EquipoCompetencia equipo) {

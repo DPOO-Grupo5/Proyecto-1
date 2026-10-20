@@ -63,6 +63,8 @@ public class Socio extends Usuario implements java.io.Serializable {
 
     public Reserva reservarInstalacion(Instalacion inst, LocalDateTime ini, LocalDateTime fin, int jugadores, String modalidad) {
         if (inst == null) throw new IllegalArgumentException("La instalación es obligatoria.");
+        if (inst.getDisciplina() != null && !inst.getDisciplina().tieneInscripcionActiva(this))
+            throw new IllegalStateException("El socio debe estar inscrito en la disciplina de esta instalación.");
         Reserva reserva = new Reserva(ini, fin, jugadores, modalidad, inst);
         reserva.setSocioResponsable(this);
         reserva.validar();
@@ -193,7 +195,7 @@ public class Socio extends Usuario implements java.io.Serializable {
         long asistidas = 0;
         
         for (Asistencia a : asistencias) {
-            if ("asistió".equalsIgnoreCase(a.getEstado())) {
+        	if ("asistió".equalsIgnoreCase(a.getEstado()) || "llegó tarde".equalsIgnoreCase(a.getEstado())) {
                 asistidas++;
             }
         }

@@ -28,8 +28,8 @@ public class Asistencia implements java.io.Serializable {
     public void setEstado(String estado) {
         if (estado == null) throw new IllegalArgumentException("El estado de asistencia es obligatorio.");
         String normalizado = estado.trim().toLowerCase(Locale.ROOT);
-        if (!(normalizado.equals("asistió") || normalizado.equals("no asistió") || normalizado.equals("justificada"))) {
-            throw new IllegalArgumentException("El estado debe ser asistió, no asistió o justificada.");
+        if (!(normalizado.equals("asistió") || normalizado.equals("faltó") || normalizado.equals("llegó tarde"))) {
+            throw new IllegalArgumentException("El estado debe ser asistió, faltó o llegó tarde.");
         }
         this.estado = normalizado;
     }

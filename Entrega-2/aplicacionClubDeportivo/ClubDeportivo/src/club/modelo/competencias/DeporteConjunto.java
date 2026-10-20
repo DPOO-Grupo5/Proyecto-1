@@ -20,6 +20,7 @@ public abstract class DeporteConjunto implements java.io.Serializable {
         if (regla == null) throw new IllegalArgumentException("La regla es obligatoria.");
         if (!reglasPuntuacion.contains(regla)) reglasPuntuacion.add(regla);
     }
+    public void validarMarcador(int local, int visitante) { }
 
     public int getMinJugadores() { return jugadoresPorEquipo; }
 

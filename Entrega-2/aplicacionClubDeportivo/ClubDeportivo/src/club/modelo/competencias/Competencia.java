@@ -1,7 +1,11 @@
 package club.modelo.competencias;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+
+import club.modelo.usuarios.Socio;
 
 public class Competencia implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
@@ -78,6 +82,50 @@ public class Competencia implements java.io.Serializable {
             if (!partidos.contains(partido)) partidos.add(partido);
         }
         return nueva;
+    }
+    
+    public void registrarNomina(EquipoCompetencia equipo, List<Socio> jugadores) {
+        InscripcionCompetencia inscripcion = null;
+        for (InscripcionCompetencia i : inscripciones) if (i.getEquipo() == equipo) inscripcion = i;
+        if (inscripcion == null) throw new IllegalArgumentException("El equipo no está inscrito en la competencia.");
+        if (jugadores == null || jugadores.size() < deporte.getMinJugadores())
+            throw new IllegalStateException("La nómina no alcanza el mínimo de jugadores.");
+        for (Socio s : jugadores) inscripcion.registrarEnNomina(s);
+    }
+
+    public boolean estaEnNomina(Socio socio) {
+        for (InscripcionCompetencia i : inscripciones) if (i.enNomina(socio)) return true;
+        return false;
+    }
+
+    public List<Map.Entry<Socio, Integer>> clasificacionGoleadores() {
+        Map<Socio, Integer> goles = new LinkedHashMap<>();
+        for (PartidoCompetencia p : partidos)
+            for (EstadisticaJugadorPartido e : p.getEstadisticas())
+                if (e instanceof EstadisticaJugadorFutbol)
+                    goles.merge(e.getJugador(), ((EstadisticaJugadorFutbol) e).getGoles(), Integer::sum);
+        List<Map.Entry<Socio, Integer>> lista = new ArrayList<>(goles.entrySet());
+        lista.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+        return lista;
+    }
+
+    public List<Map.Entry<Socio, Integer>> clasificacionDestacados() {
+        Map<Socio, Integer> puntos = new LinkedHashMap<>();
+        for (PartidoCompetencia p : partidos) {
+            for (EstadisticaJugadorPartido e : p.getEstadisticas()) {
+                int valor = 0;
+                if (e instanceof EstadisticaJugadorFutbol)
+                    valor = ((EstadisticaJugadorFutbol) e).getGoles() + ((EstadisticaJugadorFutbol) e).getAsistencias();
+                else if (e instanceof EstadisticaJugadorBaloncesto)
+                    valor = ((EstadisticaJugadorBaloncesto) e).getPuntos() + ((EstadisticaJugadorBaloncesto) e).getRebotes();
+                else if (e instanceof EstadisticaJugadorVoleibol)
+                    valor = ((EstadisticaJugadorVoleibol) e).getAces() + ((EstadisticaJugadorVoleibol) e).getBloqueos();
+                puntos.merge(e.getJugador(), valor, Integer::sum);
+            }
+        }
+        List<Map.Entry<Socio, Integer>> lista = new ArrayList<>(puntos.entrySet());
+        lista.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+        return lista;
     }
 
     public String getNombre() { return nombre; }

@@ -1,0 +1,3 @@
+id;Producto.nombre;Producto.precio;Producto.existencias;ProductoTienda.categoria
+10;Balón demo;50000.0;@28;deporte
+11;Raqueta de tenis demo;180000.0;@29;raquetas

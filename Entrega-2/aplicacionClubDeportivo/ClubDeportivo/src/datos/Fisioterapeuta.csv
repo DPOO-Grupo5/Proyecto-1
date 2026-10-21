@@ -1,0 +1,2 @@
+id;Usuario.login;Usuario.nombre;Usuario.puntosFidelidad;Usuario.password;Usuario.descuento;Usuario.transacciones;Empleado.codigoDescuento;Empleado.turnos;Empleado.solicitudes;Empleado.sugerencias;Empleado.sociosConDescuento
+2;fisio.demo;Fisioterapeuta de demostración;0;pbkdf2$120000$N/6ynGuDWpBJlWvoVwdbSA\=\=$hSFaYoEePwwXELrIBr+CQHUjTUn6PzWeYlOQ6/NeITM\=;0.0;[];FISIO15;@22;[];[];[]

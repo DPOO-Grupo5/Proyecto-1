@@ -1,0 +1,2 @@
+id;Usuario.login;Usuario.nombre;Usuario.puntosFidelidad;Usuario.password;Usuario.descuento;Usuario.transacciones;Administrador.sugerenciasAprobadas;Administrador.solicitudesAprobadas;Administrador.productosCatalogo
+5;admin;Administrador de demostración;0;pbkdf2$120000$Gu8FNAWprN4333euCshksw\=\=$M8ANpt+WEicChCIqNVTqDt0Sl+G8EBjpDyPdUJmPI70\=;0.0;[];[];[];[]

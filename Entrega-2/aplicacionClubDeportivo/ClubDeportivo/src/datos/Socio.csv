@@ -1,0 +1,4 @@
+id;Usuario.login;Usuario.nombre;Usuario.puntosFidelidad;Usuario.password;Usuario.descuento;Usuario.transacciones;Socio.fechaNacimiento;Socio.inscripcionesDisciplina;Socio.reservas;Socio.inscripcionesEquipo;Socio.estadisticas;Socio.estadisticasIndividuales;Socio.asistencias;Socio.sanciones;Socio.sesionesConvocado;Socio.partidosPractica
+4;socio.demo2;Segundo socio de demostración;0;pbkdf2$120000$lTK0ELYmbXonEpYS9VlT4Q\=\=$Fj8BtMckKL/t0YDoN60TnDP7DIKFL5Lze2IH/k4/ftk\=;0.0;[];2001-05-20;[];[];[];[];[];[];[];[];[]
+6;socio.demo;Socio de demostración;0;pbkdf2$120000$Ob1rB544CsRlZ+UPkA8wzg\=\=$MiZnyfPN2hBml4/W4NLBkW80BcMbzRXb7GLzX0oyUAo\=;0.0;[];2000-01-01;[];[];@24;[];[];[];[];[];[]
+8;usuario1;Federico;0;pbkdf2$120000$Ja8yWBH/ZoA8+F1gaZziVQ\=\=$7Em340CMAXXHALFEzp5y5RZ+OOtrwBAxUSvXFwSEKnU\=;0.0;[];2000-01-01;[];[];[];[];[];[];[];[];[]

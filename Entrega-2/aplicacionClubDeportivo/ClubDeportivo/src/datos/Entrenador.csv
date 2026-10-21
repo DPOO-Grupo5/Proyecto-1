@@ -1,0 +1,3 @@
+id;Usuario.login;Usuario.nombre;Usuario.puntosFidelidad;Usuario.password;Usuario.descuento;Usuario.transacciones;Empleado.codigoDescuento;Empleado.turnos;Empleado.solicitudes;Empleado.sugerencias;Empleado.sociosConDescuento;Entrenador.sesiones;Entrenador.disciplinas;Entrenador.reservas
+3;entrenador.demo;Entrenador de demostración;0;pbkdf2$120000$DdmrniM20eM3XvfLQigEtA\=\=$jVUJTaAvVcisvrOR3z3O9J67Hr3/vf0j4YBukBxF9Hw\=;0.0;[];ENTRE15;@23;[];[];[];[];[];[]
+7;entrenador2.demo;Segundo entrenador;0;pbkdf2$120000$/+it64jTamYLPqHHKNn9WA\=\=$boXpuHdlgoZAiVRXDU2eAClWJPFtLfJ17is2M4V38Nc\=;0.0;[];ENTRE2;@25;[];[];[];[];[];[]

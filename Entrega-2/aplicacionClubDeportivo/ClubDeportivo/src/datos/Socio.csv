@@ -1,4 +1,0 @@
-id;Usuario.login;Usuario.nombre;Usuario.puntosFidelidad;Usuario.password;Usuario.descuento;Usuario.transacciones;Socio.fechaNacimiento;Socio.inscripcionesDisciplina;Socio.reservas;Socio.inscripcionesEquipo;Socio.estadisticas;Socio.estadisticasIndividuales;Socio.asistencias;Socio.sanciones;Socio.sesionesConvocado;Socio.partidosPractica
-3;socio.demo;Socio de demostración;0;pbkdf2$120000$ynmC+LbBxOVICaexwgQUbw\=\=$X6PjpQjGdSuhAQYC8+oafipXfLxzdbOIwSovyZCb1T0\=;0.0;[];2000-01-01;[];[];@22;[];[];[];[];[];[]
-4;123;122;0;pbkdf2$120000$FwBzoFVCNgzCb8hKoVPiIg\=\=$tqXiKedYSIJ57c1c7zcLvMDZ/16ZGyEnBJfBzgFOcj8\=;0.0;[];2000-02-22;[];[];[];[];[];[];[];[];[]
-5;socio.demo2;Segundo socio de demostración;0;pbkdf2$120000$bqR9MSx8LvBbMxNMwfh1TA\=\=$v8lR/ZMNe5xBZfZevbkpD0Sd2hw2g2nEY2jA/3vDH0s\=;0.0;[];2001-05-20;[];[];[];[];[];[];[];[];[]

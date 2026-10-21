@@ -1,2 +1,0 @@
-id;Usuario.login;Usuario.nombre;Usuario.puntosFidelidad;Usuario.password;Usuario.descuento;Usuario.transacciones;Administrador.sugerenciasAprobadas;Administrador.solicitudesAprobadas;Administrador.productosCatalogo
-2;admin;Administrador de demostración;0;pbkdf2$120000$t3rKnh3xAVKgrjexhuBzGg\=\=$TELSadtLO3Z9bW2oqTVYLZNZhow1ya3yJjwpGDiFVTo\=;0.0;[];[];[];[]

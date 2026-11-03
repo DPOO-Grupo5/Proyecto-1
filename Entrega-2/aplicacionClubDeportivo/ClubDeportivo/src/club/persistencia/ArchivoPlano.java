@@ -29,7 +29,7 @@ import java.util.Set;
 import club.model.SistemaClub;
 
 public class ArchivoPlano {
-    private static final String CARPETA_PREDETERMINADA = "src/datos";
+    private static final String CARPETA_PREDETERMINADA = "datos_seneca";
     private static final String INDICE = "indice.csv";
     private static final char SEPARADOR = ';';
     private static final Charset UTF8 = StandardCharsets.UTF_8;

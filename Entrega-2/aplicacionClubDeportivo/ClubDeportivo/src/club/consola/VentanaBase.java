@@ -2,16 +2,17 @@ package club.consola;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.time.DateTimeException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -44,7 +45,7 @@ public abstract class VentanaBase extends JFrame implements ActionListener
     private final ArchivoPlano archivo = new ArchivoPlano();
     private JPanel centro;
 
-    // opciones que tienen TODOS los usuarios (las implementa esta clase)
+    // opciones que tienen TODOS los usuarios
     private static final String TIENDA = "Comprar en la tienda";
     private static final String CAFETERIA = "Comprar en la cafetería";
     private static final String COMPRAS = "Mis compras y puntos";
@@ -101,7 +102,7 @@ public abstract class VentanaBase extends JFrame implements ActionListener
         setSize(900, 600);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);   // al cerrar se llama processWindowEvent
 
         JLabel norte = new JLabel("  " + usuario.getNombre() + "  (" + nombreRol() + ")");
         norte.setOpaque(true);
@@ -124,10 +125,6 @@ public abstract class VentanaBase extends JFrame implements ActionListener
         oeste.add(botones, BorderLayout.NORTH);
         add(oeste, BorderLayout.WEST);
 
-        addWindowListener(new WindowAdapter()
-        {
-            @Override public void windowClosing(WindowEvent e) { cerrar(); }
-        });
         setVisible(true);
     }
 
@@ -139,17 +136,17 @@ public abstract class VentanaBase extends JFrame implements ActionListener
         return b;
     }
 
-    /** Paneles que son iguales para cualquier usuario; null si la opción no es común. */
-    private JPanel crearPanelComun(String opcion)
+    /** La ventana se entera de que la cierran: guarda los CSV y sale. */
+    @Override
+    protected void processWindowEvent(WindowEvent e)
     {
-        switch (opcion)
+        if (e.getID() == WindowEvent.WINDOW_CLOSING)
         {
-            case TIENDA:    return new PanelComprar(sistema, usuario, true);
-            case CAFETERIA: return new PanelComprar(sistema, usuario, false);
-            case COMPRAS:   return new PanelMisCompras(usuario);
-            case PASSWORD:  return new PanelCambiarPassword(usuario);
-            default:        return null;
+            archivo.guardarEstado(sistema);
+            dispose();
+            System.exit(0);
         }
+        super.processWindowEvent(e);
     }
 
     @Override
@@ -171,166 +168,134 @@ public abstract class VentanaBase extends JFrame implements ActionListener
         }
     }
 
-    private void cerrar()
+    /** Paneles que son iguales para cualquier usuario; null si la opción no es común. */
+    private JPanel crearPanelComun(String opcion)
     {
-        archivo.guardarEstado(sistema);
-        dispose();
-        System.exit(0);
+        switch (opcion)
+        {
+            case TIENDA:    return panelComprar(true);
+            case CAFETERIA: return panelComprar(false);
+            case COMPRAS:   return panelMisCompras();
+            case PASSWORD:  return panelCambiarPassword();
+            default:        return null;
+        }
+    }
+
+    // ---------- utilidades ----------
+    /** Ejecuta la acción de un botón; si el modelo lanza un error de negocio, lo muestra. */
+    private static void protegido(Component padre, Runnable accion)
+    {
+        try
+        {
+            accion.run();
+        }
+        catch (IllegalArgumentException | IllegalStateException | DateTimeException ex)
+        {
+            JOptionPane.showMessageDialog(padre, ex.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private static int entero(JTextField campo, String nombre, int min, int max)
+    {
+        try
+        {
+            int v = Integer.parseInt(campo.getText().trim());
+            if (v < min || v > max)
+                throw new IllegalArgumentException(nombre + " debe estar entre " + min + " y " + max + ".");
+            return v;
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new IllegalArgumentException(nombre + " debe ser un número entero.");
+        }
+    }
+
+    private static String resumen(Transaccion t)
+    {
+        return String.format("Subtotal: $%.0f%nDescuento: $%.0f%nImpuesto: $%.0f%nPropina: $%.0f",
+                t.calcularSubtotal(), t.getDescuento(), t.calcularImpuestos(), t.getPropina());
     }
 
     // ======================= Mis compras y puntos =======================
-    private static class PanelMisCompras extends JPanel
+    private JPanel panelMisCompras()
     {
-        PanelMisCompras(Usuario usuario)
+        JPanel panel = new JPanel(new BorderLayout());
+        JTextArea texto = new JTextArea();
+        texto.setEditable(false);
+
+        int cuantas = 0;
+        for (Transaccion t : usuario.consultarHistorialCompras())
         {
-            setLayout(new BorderLayout());
-            JTextArea texto = new JTextArea();
-            texto.setEditable(false);
-
-            int cuantas = 0;
-            for (Transaccion t : usuario.consultarHistorialCompras())
-            {
-                if (!t.isConfirmada()) continue;
-                cuantas++;
-                texto.append(String.format("%s | %s | total: $%.0f | puntos ganados: %d | puntos usados: %d%n",
-                        t.getFechaHora(), t.getRubro(), t.getTotal(), t.getPuntosFidelidad(), t.getPuntosRedimidos()));
-                for (DetalleTransaccion d : t.getDetalles())
-                    texto.append(String.format("     %d x %s%n", d.getCantidad(), d.getProducto().getNombre()));
-            }
-            if (cuantas == 0) texto.append("Sin compras.\n");
-            texto.append(String.format("%nSaldo de puntos de fidelidad: %d (1 punto = $1)", usuario.getPuntosFidelidad()));
-
-            add(new JLabel("  Mis compras y puntos"), BorderLayout.NORTH);
-            add(new JScrollPane(texto), BorderLayout.CENTER);
+            if (!t.isConfirmada()) continue;
+            cuantas++;
+            texto.append(String.format("%s | %s | total: $%.0f | puntos ganados: %d | puntos usados: %d%n",
+                    t.getFechaHora(), t.getRubro(), t.getTotal(), t.getPuntosFidelidad(), t.getPuntosRedimidos()));
+            for (DetalleTransaccion d : t.getDetalles())
+                texto.append(String.format("     %d x %s%n", d.getCantidad(), d.getProducto().getNombre()));
         }
+        if (cuantas == 0) texto.append("Sin compras.\n");
+        texto.append(String.format("%nSaldo de puntos de fidelidad: %d (1 punto = $1)", usuario.getPuntosFidelidad()));
+
+        panel.add(new JLabel("  Mis compras y puntos"), BorderLayout.NORTH);
+        panel.add(new JScrollPane(texto), BorderLayout.CENTER);
+        return panel;
     }
 
     // ======================= Cambiar contraseña =======================
-    private static class PanelCambiarPassword extends JPanel implements ActionListener
+    private JPanel panelCambiarPassword()
     {
-        private final Usuario usuario;
-        private final JPasswordField actual = new JPasswordField();
-        private final JPasswordField nueva = new JPasswordField();
-        private final JPasswordField repetida = new JPasswordField();
+        JPanel panel = new JPanel(new BorderLayout());
+        JPasswordField actual = new JPasswordField();
+        JPasswordField nueva = new JPasswordField();
+        JPasswordField repetida = new JPasswordField();
 
-        PanelCambiarPassword(Usuario usuario)
+        JButton boton = new JButton("Cambiar contraseña");
+        boton.addActionListener(e -> protegido(panel, () ->
         {
-            this.usuario = usuario;
-            setLayout(new BorderLayout());
-            JPanel form = new JPanel(new GridLayout(0, 2, 6, 6));
-            form.add(new JLabel("Contraseña actual:"));        form.add(actual);
-            form.add(new JLabel("Nueva contraseña:"));         form.add(nueva);
-            form.add(new JLabel("Repetir nueva contraseña:")); form.add(repetida);
-            JButton boton = new JButton("Cambiar contraseña");
-            boton.addActionListener(this);
-            form.add(new JLabel());                            form.add(boton);
+            String a = new String(actual.getPassword());
+            String n = new String(nueva.getPassword());
+            if (a.isEmpty() || n.isEmpty())
+                throw new IllegalArgumentException("Complete la contraseña actual y la nueva.");
+            if (!n.equals(new String(repetida.getPassword())))
+                throw new IllegalArgumentException("La nueva contraseña y su repetición no coinciden.");
+            usuario.actualizarPassword(a, n);
+            actual.setText(""); nueva.setText(""); repetida.setText("");
+            JOptionPane.showMessageDialog(panel, "Contraseña actualizada.");
+        }));
 
-            add(new JLabel("  Cambiar contraseña"), BorderLayout.NORTH);
-            add(form, BorderLayout.CENTER);
-        }
+        JPanel form = new JPanel(new GridLayout(0, 2, 6, 6));
+        form.add(new JLabel("Contraseña actual:"));        form.add(actual);
+        form.add(new JLabel("Nueva contraseña:"));         form.add(nueva);
+        form.add(new JLabel("Repetir nueva contraseña:")); form.add(repetida);
+        form.add(new JLabel());                            form.add(boton);
 
-        @Override
-        public void actionPerformed(ActionEvent e)
-        {
-            try
-            {
-                String a = new String(actual.getPassword());
-                String n = new String(nueva.getPassword());
-                if (a.isEmpty() || n.isEmpty())
-                    throw new IllegalArgumentException("Complete la contraseña actual y la nueva.");
-                if (!n.equals(new String(repetida.getPassword())))
-                    throw new IllegalArgumentException("La nueva contraseña y su repetición no coinciden.");
-                usuario.actualizarPassword(a, n);
-                actual.setText(""); nueva.setText(""); repetida.setText("");
-                JOptionPane.showMessageDialog(this, "Contraseña actualizada.");
-            }
-            catch (IllegalArgumentException | IllegalStateException ex)
-            {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-            }
-        }
+        panel.add(new JLabel("  Cambiar contraseña"), BorderLayout.NORTH);
+        panel.add(form, BorderLayout.CENTER);
+        return panel;
     }
 
     // ======================= Comprar (tienda o cafetería) =======================
-    private static class PanelComprar extends JPanel implements ActionListener
+    private JPanel panelComprar(boolean tienda)
     {
-        private final SistemaClub sistema;
-        private final Usuario usuario;
-        private final boolean tienda;
-        private final String rubro;
-        private final Map<Producto, Integer> carrito = new LinkedHashMap<>();
+        String rubro = tienda ? "tienda" : "cafeteria";
+        Map<Producto, Integer> carrito = new LinkedHashMap<>();
 
-        private final JComboBox<Producto> productos = new JComboBox<>();
-        private final JTextField cantidad = new JTextField("1", 5);
-        private JTextField codigo;             // solo clientes en tienda
-        private JCheckBox descuentoEmpleado;   // solo empleados en tienda
-        private JTextField puntos;             // solo si tiene puntos
-        private JTextField propina;            // solo cafetería
-        private final JTextArea salida = new JTextArea();
+        JPanel panel = new JPanel(new BorderLayout());
+        JComboBox<Producto> productos = new JComboBox<>();
+        JTextField cantidad = new JTextField("1", 5);
+        JTextArea salida = new JTextArea();
+        salida.setEditable(false);
 
-        PanelComprar(SistemaClub sistema, Usuario usuario, boolean tienda)
-        {
-            this.sistema = sistema;
-            this.usuario = usuario;
-            this.tienda = tienda;
-            this.rubro = tienda ? "tienda" : "cafeteria";
-            setLayout(new BorderLayout());
+        // campos opcionales: solo existen según el tipo de usuario y de compra
+        JTextField codigo = null;
+        JCheckBox descuentoEmpleado = null;
+        JTextField puntos = null;
+        JTextField propina = null;
 
-            JPanel arriba = new JPanel();
-            arriba.setLayout(new BoxLayout(arriba, BoxLayout.Y_AXIS));
-            arriba.add(new JLabel(tienda ? "  Comprar en la tienda" : "  Comprar en la cafetería"));
+        productos.setRenderer((l, p, i, s, f) -> new JLabel(p == null ? ""
+                : String.format("%s - $%.0f (disponibles: %d)", p.getNombre(), p.getPrecio(), p.getCantidadTotal())));
 
-            cargarProductos();
-            productos.setRenderer((l, p, i, s, f) -> new JLabel(p == null ? "" : describir(p)));
-
-            JPanel fila1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            fila1.add(new JLabel("Producto:")); fila1.add(productos);
-            fila1.add(new JLabel("Cantidad:")); fila1.add(cantidad);
-            fila1.add(boton("Agregar al carrito", "agregar"));
-            fila1.add(boton("Vaciar", "vaciar"));
-            arriba.add(fila1);
-
-            JPanel fila2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            if (tienda && usuario instanceof Empleado)
-            {
-                descuentoEmpleado = new JCheckBox("Aplicar mi descuento de empleado (15 %)");
-                fila2.add(descuentoEmpleado);
-            }
-            else if (tienda)
-            {
-                codigo = new JTextField(10);
-                fila2.add(new JLabel("Código de descuento (opcional):")); fila2.add(codigo);
-            }
-            if (usuario.getPuntosFidelidad() > 0)
-            {
-                puntos = new JTextField("0", 5);
-                fila2.add(new JLabel("Puntos a redimir (tiene " + usuario.getPuntosFidelidad() + "):"));
-                fila2.add(puntos);
-            }
-            if (!tienda)
-            {
-                propina = new JTextField("10", 5);
-                fila2.add(new JLabel("Propina % (sugerida 10):")); fila2.add(propina);
-            }
-            fila2.add(boton("Ver resumen", "resumen"));
-            fila2.add(boton("Confirmar compra", "confirmar"));
-            arriba.add(fila2);
-
-            salida.setEditable(false);
-            add(arriba, BorderLayout.NORTH);
-            add(new JScrollPane(salida), BorderLayout.CENTER);
-            mostrarCarrito();
-        }
-
-        private JButton boton(String texto, String comando)
-        {
-            JButton b = new JButton(texto);
-            b.setActionCommand(comando);
-            b.addActionListener(this);
-            return b;
-        }
-
-        private void cargarProductos()
+        Runnable cargarProductos = () ->
         {
             productos.removeAllItems();
             for (Producto p : sistema.getProductos())
@@ -338,61 +303,10 @@ public abstract class VentanaBase extends JFrame implements ActionListener
                 boolean delRubro = tienda ? p instanceof ProductoTienda : p instanceof ProductoCafeteria;
                 if (delRubro && p.getCantidadTotal() > 0) productos.addItem(p);
             }
-        }
+        };
+        cargarProductos.run();
 
-        private static String describir(Producto p)
-        {
-            return String.format("%s - $%.0f (disponibles: %d)", p.getNombre(), p.getPrecio(), p.getCantidadTotal());
-        }
-
-        @Override
-        public void actionPerformed(ActionEvent e)
-        {
-            try
-            {
-                switch (e.getActionCommand())
-                {
-                    case "agregar":   agregar(); break;
-                    case "vaciar":    carrito.clear(); mostrarCarrito(); break;
-                    case "resumen":   verResumen(); break;
-                    case "confirmar": confirmarCompra(); break;
-                    default: break;
-                }
-            }
-            catch (IllegalArgumentException | IllegalStateException ex)
-            {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
-            }
-        }
-
-        private int entero(JTextField campo, String nombre, int min, int max)
-        {
-            try
-            {
-                int v = Integer.parseInt(campo.getText().trim());
-                if (v < min || v > max)
-                    throw new IllegalArgumentException(nombre + " debe estar entre " + min + " y " + max + ".");
-                return v;
-            }
-            catch (NumberFormatException ex)
-            {
-                throw new IllegalArgumentException(nombre + " debe ser un número entero.");
-            }
-        }
-
-        private void agregar()
-        {
-            Producto p = (Producto) productos.getSelectedItem();
-            if (p == null) throw new IllegalStateException("No hay productos disponibles.");
-            int total = carrito.getOrDefault(p, 0) + entero(cantidad, "La cantidad", 1, 1000);
-            if (total > p.getCantidadTotal())
-                throw new IllegalStateException("No hay existencias suficientes de " + p.getNombre()
-                        + " (disponibles: " + p.getCantidadTotal() + ").");
-            carrito.put(p, total);
-            mostrarCarrito();
-        }
-
-        private void mostrarCarrito()
+        Runnable mostrarCarrito = () ->
         {
             StringBuilder sb = new StringBuilder("--- Carrito ---\n");
             if (carrito.isEmpty()) sb.append("Vacío.\n");
@@ -405,10 +319,66 @@ public abstract class VentanaBase extends JFrame implements ActionListener
             }
             sb.append(String.format("%nSubtotal (sin descuentos ni impuestos): $%.0f%n", subtotal));
             salida.setText(sb.toString());
-        }
+        };
 
-        /** Arma la transacción con todo lo elegido; si algo falla, la saca del historial. */
-        private Transaccion armar()
+        // ---- fila 1: elegir productos ----
+        JPanel fila1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton agregar = new JButton("Agregar al carrito");
+        JButton vaciar = new JButton("Vaciar");
+        fila1.add(new JLabel("Producto:")); fila1.add(productos);
+        fila1.add(new JLabel("Cantidad:")); fila1.add(cantidad);
+        fila1.add(agregar);
+        fila1.add(vaciar);
+
+        agregar.addActionListener(e -> protegido(panel, () ->
+        {
+            Producto p = (Producto) productos.getSelectedItem();
+            if (p == null) throw new IllegalStateException("No hay productos disponibles.");
+            int total = carrito.getOrDefault(p, 0) + entero(cantidad, "La cantidad", 1, 1000);
+            if (total > p.getCantidadTotal())
+                throw new IllegalStateException("No hay existencias suficientes de " + p.getNombre()
+                        + " (disponibles: " + p.getCantidadTotal() + ").");
+            carrito.put(p, total);
+            mostrarCarrito.run();
+        }));
+        vaciar.addActionListener(e -> { carrito.clear(); mostrarCarrito.run(); });
+
+        // ---- fila 2: descuentos, puntos, propina y pago ----
+        JPanel fila2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        if (tienda && usuario instanceof Empleado)
+        {
+            descuentoEmpleado = new JCheckBox("Aplicar mi descuento de empleado (15 %)");
+            fila2.add(descuentoEmpleado);
+        }
+        else if (tienda)
+        {
+            codigo = new JTextField(10);
+            fila2.add(new JLabel("Código de descuento (opcional):")); fila2.add(codigo);
+        }
+        if (usuario.getPuntosFidelidad() > 0)
+        {
+            puntos = new JTextField("0", 5);
+            fila2.add(new JLabel("Puntos a redimir (tiene " + usuario.getPuntosFidelidad() + "):"));
+            fila2.add(puntos);
+        }
+        if (!tienda)
+        {
+            propina = new JTextField("10", 5);
+            fila2.add(new JLabel("Propina % (sugerida 10):")); fila2.add(propina);
+        }
+        JButton verResumen = new JButton("Ver resumen");
+        JButton confirmar = new JButton("Confirmar compra");
+        fila2.add(verResumen);
+        fila2.add(confirmar);
+
+        // las variables capturadas por lambdas deben ser finales: copias finales
+        final JTextField campoCodigo = codigo;
+        final JCheckBox checkEmpleado = descuentoEmpleado;
+        final JTextField campoPuntos = puntos;
+        final JTextField campoPropina = propina;
+
+        // arma la transacción con todo lo elegido; si algo falla, la saca del historial
+        Supplier<Transaccion> armar = () ->
         {
             if (carrito.isEmpty()) throw new IllegalStateException("Agregue al menos un producto al carrito.");
             Transaccion t = usuario.iniciarTransaccion(null, rubro);
@@ -416,23 +386,23 @@ public abstract class VentanaBase extends JFrame implements ActionListener
             {
                 for (Map.Entry<Producto, Integer> e : carrito.entrySet())
                     t.agregarDetalle(e.getKey(), e.getValue());
-                if (descuentoEmpleado != null && descuentoEmpleado.isSelected())
+                if (checkEmpleado != null && checkEmpleado.isSelected())
                     t.aplicarDescuentoEmpleado((Empleado) usuario);
-                if (codigo != null && !codigo.getText().trim().isEmpty())
+                if (campoCodigo != null && !campoCodigo.getText().trim().isEmpty())
                 {
-                    String cod = codigo.getText().trim();
+                    String cod = campoCodigo.getText().trim();
                     Empleado dueno = null;
                     for (Usuario u : sistema.getUsuarios().values())
                         if (u instanceof Empleado && ((Empleado) u).validarCodigo(cod)) dueno = (Empleado) u;
                     t.aplicarDescuentoCompartido(cod, dueno);
                 }
-                if (puntos != null)
+                if (campoPuntos != null)
                 {
-                    int p = entero(puntos, "Los puntos", 0, Integer.MAX_VALUE);
+                    int p = entero(campoPuntos, "Los puntos", 0, Integer.MAX_VALUE);
                     if (p > 0) t.redimirPuntos(p);
                 }
-                if (propina != null)
-                    t.calcularPropina(entero(propina, "La propina", 0, 100));
+                if (campoPropina != null)
+                    t.calcularPropina(entero(campoPropina, "La propina", 0, 100));
                 return t;
             }
             catch (RuntimeException ex)
@@ -440,17 +410,11 @@ public abstract class VentanaBase extends JFrame implements ActionListener
                 usuario.getTransacciones().remove(t);
                 throw ex;
             }
-        }
+        };
 
-        private String resumen(Transaccion t)
+        verResumen.addActionListener(e -> protegido(panel, () ->
         {
-            return String.format("Subtotal: $%.0f%nDescuento: $%.0f%nImpuesto: $%.0f%nPropina: $%.0f",
-                    t.calcularSubtotal(), t.getDescuento(), t.calcularImpuestos(), t.getPropina());
-        }
-
-        private void verResumen()
-        {
-            Transaccion t = armar();
+            Transaccion t = armar.get();
             try
             {
                 StringBuilder sb = new StringBuilder("--- Resumen (aún sin confirmar) ---\n").append(resumen(t)).append('\n');
@@ -463,27 +427,24 @@ public abstract class VentanaBase extends JFrame implements ActionListener
             {
                 usuario.getTransacciones().remove(t);
             }
-        }
+        }));
 
-        private boolean preguntar(String mensaje)
+        confirmar.addActionListener(e -> protegido(panel, () ->
         {
-            return JOptionPane.showConfirmDialog(this, mensaje, "Confirmar", JOptionPane.YES_NO_OPTION)
-                    == JOptionPane.YES_OPTION;
-        }
-
-        private void confirmarCompra()
-        {
-            Transaccion t = armar();
+            Transaccion t = armar.get();
             try
             {
                 if (!tienda)
                 {
                     List<String> alergenos = t.consultarAlergenos();
-                    if (!alergenos.isEmpty() && !preguntar("ATENCIÓN - alérgenos de su pedido: "
-                            + String.join(", ", alergenos) + "\n¿Desea continuar con la compra?"))
+                    if (!alergenos.isEmpty() && JOptionPane.showConfirmDialog(panel,
+                            "ATENCIÓN - alérgenos de su pedido: " + String.join(", ", alergenos)
+                            + "\n¿Desea continuar con la compra?", "Confirmar", JOptionPane.YES_NO_OPTION)
+                            != JOptionPane.YES_OPTION)
                         throw new IllegalStateException("Compra cancelada por alérgenos.");
                 }
-                if (!preguntar(resumen(t) + "\n\n¿Confirmar la compra?"))
+                if (JOptionPane.showConfirmDialog(panel, resumen(t) + "\n\n¿Confirmar la compra?",
+                        "Confirmar", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION)
                     throw new IllegalStateException("Compra cancelada.");
                 t.confirmar();
             }
@@ -495,9 +456,20 @@ public abstract class VentanaBase extends JFrame implements ActionListener
             String mensaje = String.format("Compra confirmada. Total: $%.0f | puntos ganados: %d | saldo de puntos: %d",
                     t.getTotal(), t.getPuntosFidelidad(), usuario.getPuntosFidelidad());
             carrito.clear();
-            cargarProductos();
+            cargarProductos.run();
             salida.setText(mensaje);
-            JOptionPane.showMessageDialog(this, mensaje);
-        }
+            JOptionPane.showMessageDialog(panel, mensaje);
+        }));
+
+        JPanel arriba = new JPanel();
+        arriba.setLayout(new BoxLayout(arriba, BoxLayout.Y_AXIS));
+        arriba.add(new JLabel(tienda ? "  Comprar en la tienda" : "  Comprar en la cafetería"));
+        arriba.add(fila1);
+        arriba.add(fila2);
+
+        panel.add(arriba, BorderLayout.NORTH);
+        panel.add(new JScrollPane(salida), BorderLayout.CENTER);
+        mostrarCarrito.run();
+        return panel;
     }
 }

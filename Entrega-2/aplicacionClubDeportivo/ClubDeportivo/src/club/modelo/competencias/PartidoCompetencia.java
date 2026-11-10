@@ -22,6 +22,9 @@ public class PartidoCompetencia implements java.io.Serializable {
     private List<EstadisticaJugadorPartido> estadisticas = new ArrayList<>();
     private Set<Socio> sancionadosEnEstePartido = new HashSet<>();
     private EquipoCompetencia ganadorPorDesempate;
+    private club.modelo.usuarios.Entrenador entrenadorResponsable;
+    public club.modelo.usuarios.Entrenador getEntrenadorResponsable() { return entrenadorResponsable; }
+    public void setEntrenadorResponsable(club.modelo.usuarios.Entrenador e) { this.entrenadorResponsable = e; }
 
     public PartidoCompetencia(LocalDate fecha, String marcador, String escenario) {
         this.fecha = fecha;

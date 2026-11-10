@@ -55,6 +55,7 @@ public class Transaccion implements java.io.Serializable {
 
     public void aplicarDescuentoEmpleado(Empleado empleado) {
         validarPendiente();
+        if (porcentajeBeneficio > 0) throw new IllegalStateException("Ya hay una promoción aplicada; los descuentos no se acumulan.");
         if (empleado == null) throw new IllegalArgumentException("El empleado es obligatorio.");
         if (comprador != empleado) throw new IllegalArgumentException("El descuento de empleado solo aplica a una compra propia.");
         double nuevoDescuento = calcularSubtotal() * empleado.getPorcentajeDescuentoPropio();
@@ -66,6 +67,7 @@ public class Transaccion implements java.io.Serializable {
 
     public void aplicarDescuentoCompartido(String codigo, Empleado empleado) {
         validarPendiente();
+        if (porcentajeBeneficio > 0) throw new IllegalStateException("Ya hay una promoción aplicada; los descuentos no se acumulan.");
         if (empleado == null || !empleado.validarCodigo(codigo)) throw new IllegalArgumentException("El código de descuento no es válido.");
         if (!(comprador instanceof Socio) || !empleado.getSociosConDescuento().contains((Socio) comprador)) throw new IllegalArgumentException("El socio no está autorizado para este descuento compartido.");
         double nuevoDescuento = calcularSubtotal() * empleado.getPorcentajeDescuentoCompartido();
@@ -121,6 +123,10 @@ public class Transaccion implements java.io.Serializable {
         if (descuentoBeneficio + descuentoPuntos > calcularSubtotal()) throw new IllegalStateException("El descuento supera el subtotal.");
         actualizarDescuento();
         validarProductosDelRubro();
+        for (DetalleTransaccion d : detalles) {
+            if (d.getProducto() instanceof Snack && ((Snack) d.getProducto()).getAlergenos().isEmpty())
+                throw new IllegalStateException("El snack " + d.getProducto().getNombre() + " no tiene alérgenos registrados.");
+        }
         validarExistencias();
         if (contieneBebidaCaliente() && comprador instanceof Socio
                 && ((Socio) comprador).estaEnZonaRestringidaParaBebidasCalientes(fechaHora)) {

@@ -36,6 +36,7 @@ public class Socio extends Usuario implements java.io.Serializable {
     private List<Sancion> sanciones = new ArrayList<>();
     private List<SesionEntrenamiento> sesionesConvocado = new ArrayList<>();
     private List<PartidoPractica> partidosPractica = new ArrayList<>();
+    private String documento;
 
     public Socio(String login, String password, String nombre, LocalDate fechaNacimiento) {
         super(login, password, nombre);
@@ -200,6 +201,80 @@ public class Socio extends Usuario implements java.io.Serializable {
             }
         }
         return (double) asistidas / asistencias.size() * 100;
+    }
+    
+    public String getDocumento() { return documento; }
+    public void setDocumento(String documento) {
+        if (documento == null || documento.trim().isEmpty()) throw new IllegalArgumentException("El documento es obligatorio.");
+        this.documento = documento.trim();
+    }
+
+    public void iniciarUsoReserva(Reserva r, LocalDateTime ahora) {
+        if (r == null || ahora == null || !reservas.contains(r)) throw new IllegalArgumentException("La reserva no pertenece al socio.");
+        if (ahora.isBefore(r.getFechaHoraInicio()) || !ahora.isBefore(r.getFechaHoraFin()))
+            throw new IllegalStateException("La reserva no está activa en este momento.");
+        if (instalacionRestringida(r.getInstalacion()) && tieneBebidaCalienteReciente(ahora))
+            throw new IllegalStateException("No puedes iniciar el uso con una bebida caliente reciente.");
+    }
+
+    public String consultarRanking(DisciplinaIndividual d) {
+        InscripcionDisciplina propia = null;
+        for (InscripcionDisciplina i : inscripcionesDisciplina) if (i.getDisciplina() == d && i.isActiva()) propia = i;
+        if (propia == null) throw new IllegalStateException("No estás inscrito en esta disciplina.");
+        int posicion = 1;
+        for (InscripcionDisciplina otra : d.getInscripciones())
+            if (otra.isActiva() && otra.getRanking() > propia.getRanking()) posicion++;
+        boolean sinPartidos = true;
+        for (PartidoPractica p : partidosPractica) if (p.getDisciplina() == d && p.isResultadoRegistrado()) sinPartidos = false;
+        return "ELO: " + propia.getRanking() + " | Posición: " + posicion + (sinPartidos ? " | Aún no hay partidos jugados." : "");
+    }
+
+    public List<PartidoPractica> consultarHistorialPracticas(DisciplinaIndividual d, LocalDate desde, LocalDate hasta) {
+        if (d == null || !d.tieneInscripcionActiva(this)) throw new IllegalStateException("No estás inscrito en esta disciplina.");
+        if (desde != null && hasta != null && hasta.isBefore(desde)) throw new IllegalArgumentException("La fecha final no puede ser anterior a la inicial.");
+        List<PartidoPractica> lista = new ArrayList<>();
+        for (PartidoPractica p : partidosPractica) {
+            if (p.getDisciplina() != d || !p.isResultadoRegistrado()) continue;
+            LocalDate dia = p.getReserva().getFechaHoraInicio().toLocalDate();
+            if ((desde == null || !dia.isBefore(desde)) && (hasta == null || !dia.isAfter(hasta))) lista.add(p);
+        }
+        lista.sort((a, b) -> a.getReserva().getFechaHoraInicio().compareTo(b.getReserva().getFechaHoraInicio()));
+        return lista;
+    }
+
+    public List<SesionEntrenamiento> consultarConvocatorias() {
+        return new ArrayList<>(sesionesConvocado);
+    }
+
+    public List<String> consultarAsistencias() {
+        List<String> filas = new ArrayList<>();
+        for (SesionEntrenamiento s : sesionesConvocado) {
+            Asistencia encontrada = null;
+            for (Asistencia a : asistencias) if (a.getSesion() == s) encontrada = a;
+            String fecha = s.getFechaHora().toString();
+            if (encontrada == null) { filas.add(fecha + " | pendiente"); continue; }
+            String fila = fecha + " | " + encontrada.getEstado();
+            if (encontrada.getNotaDesempeno() != null) fila += " | nota " + encontrada.getNotaDesempeno();
+            if (encontrada.getComentario() != null && !encontrada.getComentario().isEmpty()) fila += " | " + encontrada.getComentario();
+            filas.add(fila);
+        }
+        return filas;
+    }
+
+    public String consultarEstadisticasEquipo(Equipo e) {
+        if (e == null || !getEquipos().contains(e)) throw new IllegalArgumentException("No perteneces a ese equipo.");
+        int jugados = 0, ganados = 0, empatados = 0, perdidos = 0, favor = 0, contra = 0;
+        for (club.modelo.competencias.PartidoInterno p : e.getPartidosInternos()) {
+            if (!p.isFinalizado()) continue;
+            boolean local = p.getEquipoLocal() == e;
+            int propio = local ? p.getMarcadorLocal() : p.getMarcadorVisitante();
+            int rival = local ? p.getMarcadorVisitante() : p.getMarcadorLocal();
+            jugados++; favor += propio; contra += rival;
+            if (propio > rival) ganados++; else if (propio == rival) empatados++; else perdidos++;
+        }
+        String resumen = "Jugados: " + jugados + " | Ganados: " + ganados + " | Empatados: " + empatados + " | Perdidos: " + perdidos
+                + " | A favor: " + favor + " | En contra: " + contra + " | Mis estadísticas registradas: " + estadisticas.size();
+        return jugados == 0 ? resumen + " | Tu equipo aún no tiene partidos jugados." : resumen;
     }
 
     // --- GETTERS (Se eliminaron los SETTERS por encapsulamiento) ---

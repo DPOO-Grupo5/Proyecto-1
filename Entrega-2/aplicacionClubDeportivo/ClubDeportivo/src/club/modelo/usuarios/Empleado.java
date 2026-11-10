@@ -1,5 +1,6 @@
 package club.modelo.usuarios;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,8 @@ public abstract class Empleado extends Usuario implements java.io.Serializable {
     private List<SolicitudCambioTurno> solicitudes = new ArrayList<>();
     private List<SugerenciaProducto> sugerencias = new ArrayList<>();
     private List<Socio> sociosConDescuento = new ArrayList<>();
+    private static final LocalTime APERTURA = LocalTime.of(6, 0);
+    private static final LocalTime CIERRE = LocalTime.of(22, 0);
 
     public Empleado(String login, String password, String nombre, String codigoDescuento) {
         super(login, password, nombre);
@@ -47,6 +50,13 @@ public abstract class Empleado extends Usuario implements java.io.Serializable {
 
     public SolicitudCambioTurno solicitarCambioTurno(Turno actual, Turno deseado) {
         if (actual == null || deseado == null || !turnos.contains(actual)) throw new IllegalArgumentException("El turno actual debe pertenecer al empleado.");
+        if (deseado.getHoraInicio().isBefore(APERTURA) || deseado.getHoraFin().isAfter(CIERRE))
+            throw new IllegalArgumentException("El horario propuesto está fuera del horario de atención (06:00 - 22:00).");
+        if (deseado.getDia() == actual.getDia() && deseado.getHoraInicio().equals(actual.getHoraInicio()) && deseado.getHoraFin().equals(actual.getHoraFin()))
+            throw new IllegalArgumentException("El horario propuesto es igual al actual.");
+        for (SolicitudCambioTurno s : solicitudes)
+            if (s.getTurnoActual() == actual && "Pendiente".equals(s.getEstado()))
+                throw new IllegalStateException("Ese turno ya tiene una solicitud de cambio pendiente.");
         SolicitudCambioTurno solicitud = new SolicitudCambioTurno(this, actual, deseado);
         this.solicitudes.add(solicitud);
         return solicitud;
@@ -74,6 +84,8 @@ public abstract class Empleado extends Usuario implements java.io.Serializable {
     public List<Turno> consultarTurnos() {
         return this.turnos;
     }
+    
+    
 
    
     public String getCodigoDescuento() { return codigoDescuento; }

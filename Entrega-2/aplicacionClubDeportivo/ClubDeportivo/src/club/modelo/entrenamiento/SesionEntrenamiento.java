@@ -33,7 +33,7 @@ public class SesionEntrenamiento implements java.io.Serializable {
         this.asistencias = new ArrayList<>();
     }
 
-    // --- MÉTODOS DE LÓGICA ---
+
 
     public void agregarConvocado(Socio s) {
         validarConvocado(s);
@@ -41,6 +41,9 @@ public class SesionEntrenamiento implements java.io.Serializable {
             convocados.add(s);
             s.registrarSesionConvocado(this);
         }
+    }
+    public boolean haFinalizado(LocalDateTime ahora) {
+        return ahora != null && !ahora.isBefore(fechaHora.plusMinutes(duracionMinutos));
     }
 
     public void validarConvocados(List<Socio> socios) {

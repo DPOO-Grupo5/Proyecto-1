@@ -25,9 +25,15 @@ public class Equipo extends EquipoCompetencia implements java.io.Serializable {
         this(nombre, cupoMaximo);
         setDeporte(deporte);
         setCategoria(categoria);
+        if (deporte != null && cupoMaximo < deporte.getMinJugadores())
+            throw new IllegalArgumentException("El cupo es menor al mínimo de habilitados del deporte (" + deporte.getMinJugadores() + ").");
     }
 
     public void darDeBaja() {
+        if (!activo) throw new IllegalStateException("El equipo ya está dado de baja.");
+        for (PartidoInterno p : partidosInternos)
+            if (!p.isFinalizado()) throw new IllegalStateException("El equipo tiene partidos pendientes.");
+        for (InscripcionEquipo i : inscripcionesActivas()) i.retirar(java.time.LocalDate.now());
         this.activo = false;
     }
     

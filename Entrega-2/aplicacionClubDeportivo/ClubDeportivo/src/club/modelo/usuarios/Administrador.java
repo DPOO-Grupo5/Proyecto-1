@@ -18,6 +18,7 @@ import club.modelo.competencias.DeporteConjunto;
 import club.modelo.competencias.Equipo;
 import club.modelo.competencias.Formato;
 import club.modelo.competencias.InscripcionEquipo;
+import club.modelo.competencias.InstitucionRival;
 import club.model.SistemaClub;
 import club.modelo.tienda.Existencia;
 import club.modelo.tienda.Producto;
@@ -45,8 +46,9 @@ public class Administrador extends Usuario implements java.io.Serializable {
         sistema.registrarUsuario(usuario);
     }
 
-    public void darDeBajaUsuario(Usuario usuario, List<Usuario> existentes) {
-        if (existentes == null || usuario == null || !existentes.remove(usuario)) throw new IllegalArgumentException("El usuario no está registrado.");
+    public void darDeBajaUsuario(Usuario usuario, SistemaClub sistema) {
+        if (sistema == null || usuario == null) throw new IllegalArgumentException("El usuario y el sistema son obligatorios.");
+        sistema.darDeBajaUsuario(usuario.getLogin());
     }
 
     public Equipo crearEquipo(String nombre, DeporteConjunto deporte, Categoria categoria, int cupo) {
@@ -60,10 +62,6 @@ public class Administrador extends Usuario implements java.io.Serializable {
         return equipo;
     }
 
-    public void darDeBajaEquipo(Equipo equipo) {
-        if (equipo == null) throw new IllegalArgumentException("El equipo es obligatorio.");
-        equipo.darDeBaja();
-    }
 
     public InscripcionEquipo inscribirJugadorEnEquipo(Socio socio, Equipo equipo, String posicion, int camiseta) {
         if (equipo == null) throw new IllegalArgumentException("El equipo es obligatorio.");
@@ -148,31 +146,6 @@ public class Administrador extends Usuario implements java.io.Serializable {
         return total;
     }
 
-    public List<Reserva> historialReservas(SistemaClub sistema) {
-        List<Reserva> todas = new ArrayList<>();
-        for (Instalacion i : sistema.getInstalaciones()) todas.addAll(i.getReservas());
-        return todas;
-    }
-
-    public List<SesionEntrenamiento> historialSesiones(SistemaClub sistema) {
-        List<SesionEntrenamiento> todas = new ArrayList<>();
-        for (Instalacion i : sistema.getInstalaciones()) todas.addAll(i.getSesiones());
-        return todas;
-    }
-
-    public List<PartidoInterno> historialPartidosInternos(SistemaClub sistema) {
-        List<PartidoInterno> todos = new ArrayList<>();
-        for (Equipo e : sistema.getEquipos())
-            for (PartidoInterno p : e.getPartidosInternos()) if (!todos.contains(p)) todos.add(p);
-        return todos;
-    }
-
-    public List<PartidoCompetencia> historialPartidosCompetencia(SistemaClub sistema) {
-        List<PartidoCompetencia> todos = new ArrayList<>();
-        for (Competencia c : sistema.getCompetencias()) todos.addAll(c.getPartidos());
-        return todos;
-    }
-
     public String estadoInventario(SistemaClub sistema) {
         StringBuilder sb = new StringBuilder("--- Instalaciones ---\n");
         for (Instalacion i : sistema.getInstalaciones())
@@ -220,6 +193,20 @@ public class Administrador extends Usuario implements java.io.Serializable {
             if (u instanceof Empleado) empleados.add((Empleado) u);
         return empleados;
     }
+    public PartidoCompetencia programarPartidoOficial(Competencia c, Equipo propio, InstitucionRival rival,
+            LocalDate fecha, String escenario, Entrenador responsable) {
+if (c == null || propio == null || rival == null || fecha == null || responsable == null || escenario == null || escenario.trim().isEmpty())
+throw new IllegalArgumentException("Competencia, equipo, rival, fecha, escenario y entrenador responsable son obligatorios.");
+if (!c.getEquipos().contains(propio)) throw new IllegalStateException("El equipo no está inscrito en la competencia.");
+if (!c.getEquipos().contains(rival)) c.agregarEquipo(rival);
+PartidoCompetencia partido = new PartidoCompetencia(fecha, null, escenario.trim());
+partido.agregarEquipo(propio);
+partido.agregarEquipo(rival);
+partido.setEntrenadorResponsable(responsable);
+c.getPartidos().add(partido);
+partido.setCompetencia(c);
+return partido;
+}
 
     public List<SolicitudCambioTurno> consultarSolicitudesPendientes(List<Empleado> empleados) {
         List<SolicitudCambioTurno> pendientes = new ArrayList<>();
@@ -246,4 +233,107 @@ public class Administrador extends Usuario implements java.io.Serializable {
     public List<SugerenciaProducto> getSugerenciasAprobadas() { return sugerenciasAprobadas; }
     public List<SolicitudCambioTurno> getSolicitudesAprobadas() { return solicitudesAprobadas; }
     public List<Producto> getProductosCatalogo() { return productosCatalogo; }
+    
+    public void darDeBajaJugador(Equipo equipo, Socio socio, SistemaClub sistema) {
+        if (equipo == null || socio == null || sistema == null) throw new IllegalArgumentException("Equipo, socio y sistema son obligatorios.");
+        boolean activo = false;
+        for (InscripcionEquipo i : equipo.getInscripcionesActivas()) if (i.getSocio() == socio) activo = true;
+        if (!activo) throw new IllegalStateException("El jugador no está activo en el equipo.");
+        for (Competencia c : sistema.getCompetencias())
+            if (c.getEquipos().contains(equipo) && c.estaEnNomina(socio))
+                throw new IllegalStateException("El jugador está en la nómina de la competencia " + c.getNombre() + ".");
+        equipo.retirarJugador(socio);
+    }
+
+    public void darDeBajaEquipo(Equipo equipo, SistemaClub sistema) {
+        if (equipo == null || sistema == null) throw new IllegalArgumentException("El equipo y el sistema son obligatorios.");
+        for (Competencia c : sistema.getCompetencias())
+            if (c.getEquipos().contains(equipo)) throw new IllegalStateException("El equipo está inscrito en la competencia " + c.getNombre() + ".");
+        equipo.darDeBaja();
+    }
+    
+    public void programarTurnos(List<Empleado> empleados, java.time.LocalTime apertura, java.time.LocalTime cierre) {
+        if (empleados == null || apertura == null || cierre == null || !apertura.isBefore(cierre))
+            throw new IllegalArgumentException("Empleados y horario de atención válidos son obligatorios.");
+        for (java.time.DayOfWeek dia : java.time.DayOfWeek.values()) {
+            for (java.time.LocalTime h = apertura; h.isBefore(cierre); h = h.plusMinutes(30)) {
+                int entrenadores = 0, fisios = 0;
+                for (Empleado e : empleados) {
+                    for (Turno t : e.getTurnos()) {
+                        if (t.cubre(dia, h)) {
+                            if (e instanceof Entrenador) entrenadores++;
+                            else if (e instanceof Fisioterapeuta) fisios++;
+                            break;
+                        }
+                    }
+                }
+                if (entrenadores < 2 || fisios < 1)
+                    throw new IllegalStateException("Cobertura insuficiente el " + dia + " a las " + h + ": " + entrenadores + " entrenadores y " + fisios + " fisioterapeutas.");
+            }
+        }
+    }
+    
+    private void validarPeriodo(LocalDate desde, LocalDate hasta) {
+        if (desde == null || hasta == null || hasta.isBefore(desde)) throw new IllegalArgumentException("El rango de fechas es inválido.");
+    }
+
+    public List<Reserva> historialReservas(SistemaClub sistema, LocalDate desde, LocalDate hasta) {
+        validarPeriodo(desde, hasta);
+        List<Reserva> lista = new ArrayList<>();
+        for (Instalacion i : sistema.getInstalaciones())
+            for (Reserva r : i.getReservas()) {
+                LocalDate d = r.getFechaHoraInicio().toLocalDate();
+                if (!d.isBefore(desde) && !d.isAfter(hasta)) lista.add(r);
+            }
+        return lista;
+    }
+
+    public List<SesionEntrenamiento> historialSesiones(SistemaClub sistema, LocalDate desde, LocalDate hasta) {
+        validarPeriodo(desde, hasta);
+        List<SesionEntrenamiento> lista = new ArrayList<>();
+        for (Instalacion i : sistema.getInstalaciones())
+            for (SesionEntrenamiento s : i.getSesiones()) {
+                LocalDate d = s.getFechaHora().toLocalDate();
+                if (!d.isBefore(desde) && !d.isAfter(hasta)) lista.add(s);
+            }
+        return lista;
+    }
+
+    public List<PartidoInterno> historialPartidosInternos(SistemaClub sistema, LocalDate desde, LocalDate hasta) {
+        validarPeriodo(desde, hasta);
+        List<PartidoInterno> lista = new ArrayList<>();
+        for (Equipo e : sistema.getEquipos())
+            for (PartidoInterno p : e.getPartidosInternos()) {
+                LocalDate d = p.getFechaHora().toLocalDate();
+                if (!lista.contains(p) && !d.isBefore(desde) && !d.isAfter(hasta)) lista.add(p);
+            }
+        return lista;
+    }
+
+    public List<PartidoCompetencia> historialPartidosCompetencia(SistemaClub sistema, LocalDate desde, LocalDate hasta) {
+        validarPeriodo(desde, hasta);
+        List<PartidoCompetencia> lista = new ArrayList<>();
+        for (Competencia c : sistema.getCompetencias())
+            for (PartidoCompetencia p : c.getPartidos())
+                if (p.getFecha() != null && !p.getFecha().isBefore(desde) && !p.getFecha().isAfter(hasta)) lista.add(p);
+        return lista;
+    }
+    
+    public Transaccion registrarMensualidad(Socio socio, java.time.YearMonth mes, double valor) {
+        if (socio == null || mes == null) throw new IllegalArgumentException("El socio y el mes son obligatorios.");
+        if (valor <= 0) throw new IllegalArgumentException("El valor debe ser mayor que 0.");
+        String nombre = "Mensualidad " + mes;
+        for (Transaccion t : socio.getTransacciones())
+            if (t.isConfirmada() && "mensualidad".equals(t.getRubro()) && !t.getDetalles().isEmpty()
+                    && nombre.equals(t.getDetalles().get(0).getProducto().getNombre()))
+                throw new IllegalStateException("El mes " + mes + " ya está pagado.");
+        club.modelo.tienda.ProductoTienda concepto = new club.modelo.tienda.ProductoTienda(nombre, valor, "Mensualidad");
+        concepto.agregarExistencia(new Existencia(1, "N/A"));
+        Map<Producto, Integer> items = new HashMap<>();
+        items.put(concepto, 1);
+        Transaccion t = socio.iniciarTransaccion(items, "mensualidad");
+        t.confirmar();
+        return t;
+    }
+    
 }

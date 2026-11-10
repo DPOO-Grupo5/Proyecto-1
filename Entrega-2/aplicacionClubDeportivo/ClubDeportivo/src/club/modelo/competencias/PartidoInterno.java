@@ -19,6 +19,8 @@ public class PartidoInterno implements java.io.Serializable {
     private Equipo equipoLocal;
     private Equipo equipoVisitante;
     private List<EstadisticaJugadorPartido> estadisticas = new ArrayList<>();
+    private club.modelo.usuarios.Entrenador programadoPor;
+    private List<Socio> alineacion = new ArrayList<>();
 
     public PartidoInterno(Equipo equipoLocal, Equipo equipoVisitante, LocalDateTime fechaHora) {
         this.equipoLocal = equipoLocal;
@@ -110,6 +112,20 @@ public class PartidoInterno implements java.io.Serializable {
             estadistica.setSancion(sancion);
             jugador.registrarSancion(sancion);
         }
+    }
+    
+    public club.modelo.usuarios.Entrenador getProgramadoPor() { return programadoPor; }
+    public void setProgramadoPor(club.modelo.usuarios.Entrenador e) { this.programadoPor = e; }
+    public List<Socio> getAlineacion() { return alineacion; }
+
+    public void definirAlineacion(List<Socio> jugadores) {
+        if (jugadores == null || jugadores.isEmpty()) throw new IllegalArgumentException("La alineación no puede estar vacía.");
+        for (Socio j : jugadores) {
+            if (!perteneceActivo(equipoLocal, j) && !perteneceActivo(equipoVisitante, j))
+                throw new IllegalArgumentException(j.getNombre() + " no pertenece a ninguno de los equipos.");
+            if (j.tieneSancionVigente()) throw new IllegalArgumentException(j.getNombre() + " está suspendido.");
+        }
+        alineacion = new ArrayList<>(jugadores);
     }
 
     private void consumirSuspensiones(Equipo equipo) {

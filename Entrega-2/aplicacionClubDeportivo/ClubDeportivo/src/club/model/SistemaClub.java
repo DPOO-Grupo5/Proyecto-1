@@ -26,6 +26,13 @@ public class SistemaClub implements java.io.Serializable {
         String login = usuario.getLogin().trim();
         usuario.setLogin(login);
         for (String registrado : usuarios.keySet()) if (registrado.equalsIgnoreCase(login)) throw new IllegalArgumentException("El login ya está registrado.");
+        if (usuario instanceof club.modelo.usuarios.Socio) {
+            String doc = ((club.modelo.usuarios.Socio) usuario).getDocumento();
+            if (doc == null || doc.isEmpty()) throw new IllegalArgumentException("El socio debe tener documento.");
+            for (Usuario u : usuarios.values())
+                if (u instanceof club.modelo.usuarios.Socio && doc.equalsIgnoreCase(((club.modelo.usuarios.Socio) u).getDocumento()))
+                    throw new IllegalArgumentException("El documento ya está registrado.");
+        }
         usuarios.put(login, usuario);
     }
 
@@ -49,7 +56,11 @@ public class SistemaClub implements java.io.Serializable {
 
     public void registrarEquipo(Equipo equipo) {
         validarNoRegistrado(equipos, equipo, "equipo");
-        for (Equipo existente : equipos) if (existente.getNombre().equalsIgnoreCase(equipo.getNombre())) throw new IllegalArgumentException("Ya hay un equipo con ese nombre.");
+        for (Equipo existente : equipos)
+            if (existente.getNombre().equalsIgnoreCase(equipo.getNombre())
+                    && existente.getDeporte() == equipo.getDeporte()
+                    && existente.getCategoria() == equipo.getCategoria())
+                throw new IllegalArgumentException("Ya hay un equipo con ese nombre, deporte y categoría.");
         equipos.add(equipo);
     }
     public void registrarCompetencia(Competencia competencia) {
@@ -86,6 +97,19 @@ public class SistemaClub implements java.io.Serializable {
     private <T> void validarNoRegistrado(List<T> lista, T elemento, String tipo) {
         if (elemento == null) throw new IllegalArgumentException("El " + tipo + " es obligatorio.");
         if (lista.contains(elemento)) throw new IllegalArgumentException("El " + tipo + " ya está registrado.");
+    }
+    
+    public void completarDatosFaltantes() {
+        for (Usuario u : usuarios.values()) {
+            if (u instanceof club.modelo.usuarios.Socio) {
+                club.modelo.usuarios.Socio s = (club.modelo.usuarios.Socio) u;
+                if (s.getDocumento() == null || s.getDocumento().trim().isEmpty()) s.setDocumento("SIN-DOC-" + s.getLogin());
+            }
+        }
+        for (Producto p : productos) {
+            if (p instanceof club.modelo.tienda.Snack && ((club.modelo.tienda.Snack) p).getAlergenos().isEmpty())
+                ((club.modelo.tienda.Snack) p).setAlergenos(new ArrayList<>(java.util.Arrays.asList("Ninguno")));
+        }
     }
 
     public Map<String, Usuario> getUsuarios() { return usuarios; }

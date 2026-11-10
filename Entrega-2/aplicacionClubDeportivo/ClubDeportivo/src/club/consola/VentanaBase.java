@@ -67,6 +67,7 @@ public abstract class VentanaBase extends JFrame implements ActionListener
             System.exit(1);
         }
         sistema = archivo.cargarEstado();
+        sistema.completarDatosFaltantes();
         usuario = autenticar();
         if (usuario == null) System.exit(0);
         construirVentana();
